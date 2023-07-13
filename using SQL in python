@@ -1,0 +1,83 @@
+#SQLite Database
+#It is a disk-based database that does not need any separate server process and installation of anything on your computer. You even don’t need to install any package in your Python distribution.
+#The package sqlite3 is part of the standard library since Python 2.5. We will use this sqlite3 package to create our own database.
+#import sqlite3
+#Open the Jupyter notebook and start by importing the sqlite3 package. The below code snippet is there to assist you.
+
+import sqlite3
+import pandas as pd
+import matplotlib.pyplot as plt
+
+#Create connection to SQLite Database file
+#To use the database, we must connect to the database.
+#But wait ❗️ How will you connect to the database file if it does not exists 🙄.
+#SQLite has kept all the things so simple 😎. So, when you mention a database file name in the connection statement, sqlite3 checks if such a database is already present or not. And if it is not present, the new database file is created ⚡️. So, the same connection statement can be used to connect to the existing database and to create the new database file.
+#Just paste the below code in the next cell and hit Shift+Enter.
+
+database = 'tds.sqlite'
+conn = sqlite3.connect(database)
+
+#So far, you created and connected to the database file. Now, to execute the operations on this file, you need an executor i.e. an object.
+#The cursor is the object, which will be used to execute the SQL statements on this database.
+#The cursor object with the name cur will be created using the below statement
+
+cur = conn.cursor()
+
+#Create the Table
+#Before moving ahead with creating a table, here are two important SQLite statements to understand
+#cur.execute() : To execute SQL statement mentioned within ()
+#conn.commit() : To perform the current transaction. If this method is not called, anything that has done since the last call to commit() is not visible from other database connections.
+#Before creating the table, let’s drop the table with the below line of code if it is already present in the database.
+
+drop_table_query = "DROP TABLE IF EXISTS auto"
+cur.execute(drop_table_query)
+conn.commit()
+
+#Here the table named job will be deleted from the database. If you are working with an existing database file, this command will ensure that you are deleting the previous table having the same name as this new table.
+#Now, let’s create a new table named job
+
+create_table_query = "CREATE TABLE IF NOT EXISTS auto(\
+                        name VARCHAR, mpg INTEGER,\
+                        cylinders INTEGER, displacement INTEGER,\
+                        horsepower INTEGER, weight INTEGER,\
+                        acceleration INTEGER, model_year INTEGER,\
+                        origin VARCHAR)"
+cur.execute(create_table_query)
+conn.commit()
+
+#Again it is a good way to assign the query to a variable rather than directly entering it into cur.execute() method. The name of the variable should be self-explanatory about what the query will be doing. This helps to group the queries in large ETL pipelines.
+#After creating the table, quickly check if the table is created with the required columns.
+
+check_table_cols = "SELECT * FROM auto"
+cur.execute(check_table_cols)
+col_name_list = [tuple[0] for tuple in cur.description]
+col_name_list
+
+#cur.description will give you information about the last execution of the cursor object.
+#Now it is time to keep this database aside and read the data from the downloaded dataset. ⏳⏱ And play with Pandas for a while.
+
+df = pd.read_excel('C:\\Users\\HP\\Documents\\Automobile.xlsx', header=0) 
+df.columns = (['name', 'mpg', 'cylinders', 'displacement', 'horsepower', 'weight',
+       'acceleration', 'model_year', 'origin'])
+df.head(10)
+
+df.dropna(inplace=True)
+df.info()
+
+colnames = ["mpg","displacement","horsepower","acceleration"]
+for col in colnames:
+    df[col] = df[col].astype("int64")
+df.info()
+
+df.to_sql('auto', conn, if_exists="append", index=False)
+print("Data Successfully exported !")
+
+query = "SELECT name, displacement, horsepower FROM auto"
+cur.execute(query)
+conn.commit()
+result = cur.fetchall()
+resultdf = pd.DataFrame(result)
+resultdf.columns = [tuple[0] for tuple in cur.description]
+resultdf.head()
+
+conn.close() #to close the db.
